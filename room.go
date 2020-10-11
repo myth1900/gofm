@@ -31,7 +31,7 @@ func (r *room) IncAdcs(nums int) (int, error) {
 	for i := 0; i < nums; i++ {
 		r.waitConnectAdcs <- NewAudience(r.roomID)
 	}
-	return nums, nil
+	return len(r.connectAdcs) + len(r.waitConnectAdcs), nil
 }
 
 // DecAdcs 减少听众，返回减少后的人数
@@ -45,10 +45,11 @@ func (r *room) DecAdcs(nums int) (int, error) {
 			e.Close()
 			i++
 		default:
-			break
+			goto J1
 		}
 	}
 
+J1:
 	// 从已连接的队列中减少部分人数
 	for i < nums {
 		select {
@@ -56,9 +57,10 @@ func (r *room) DecAdcs(nums int) (int, error) {
 			r.waitClosedAdcs <- e
 			i++
 		default:
-			break
+			goto J2
 		}
 	}
+J2:
 	return len(r.connectAdcs) + len(r.waitConnectAdcs), nil
 }
 

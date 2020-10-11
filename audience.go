@@ -10,13 +10,19 @@ import (
 	"time"
 )
 
+const (
+	wsUrl        = "wss://fm.missevan.com:3016/ws"
+	userInfoUrl  = "https://fm.missevan.com/api/user/info"
+	heartBeatMsg = "❤️"
+)
+
 type Audience interface {
 	Close()
 	Connect()
 }
 type audience struct {
 	roomID int
-	ws     *websocket.Conn
+	conn   *websocket.Conn
 }
 
 func NewAudience(roomID int) *audience {
@@ -26,6 +32,11 @@ func NewAudience(roomID int) *audience {
 }
 
 func (a *audience) Close() {
+	if a.conn != nil {
+		if err := a.conn.Close(); err != nil {
+			fmt.Println(err.Error())
+		}
+	}
 
 }
 
@@ -36,12 +47,35 @@ type joinAction struct {
 	RoomID int    `json:"room_id"`
 }
 
+func (a *audience) keepAlive() {
+	// 读消息
+	go func() {
+		for {
+			_, _, err := a.conn.ReadMessage()
+			if err != nil {
+				panic(err)
+			}
+			//fmt.Println(string(bts))
+		}
+	}()
+
+	// 维持心跳
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		for {
+			<-ticker.C
+			if err := a.conn.WriteMessage(1, []byte(heartBeatMsg)); err != nil {
+				panic(err)
+			}
+		}
+	}()
+}
+
 func (a *audience) Connect() {
-	const url = "wss://fm.missevan.com:3016/ws"
 	ws := &websocket.Dialer{}
 	header := make(map[string][]string)
 	header["Cookie"] = a.getCookie()
-	conn, resp, err := ws.Dial(url, header)
+	conn, resp, err := ws.Dial(wsUrl, header)
 	if err != nil {
 		panic(err)
 	}
@@ -54,30 +88,15 @@ func (a *audience) Connect() {
 		Type:   "room",
 		RoomID: a.roomID,
 	})
-
 	//
-	go func() {
-		for {
-			_, bts, _ := conn.ReadMessage()
-			fmt.Println(string(bts))
-		}
-	}()
+	a.conn = conn
 
-	// 维持心跳
-	go func() {
-		ticker := time.NewTicker(10 * time.Second)
-		for {
-			<-ticker.C
-			conn.WriteMessage(1, []byte("❤️"))
-		}
-	}()
 }
 
 // FM_SESS=20201009|2e30kyum2jik391yvwz42rz79; path=/; expires=Mon, 12 Oct 2020 11:06:56 GMT; secure; httponly
 func (a *audience) getCookie() []string {
-	const url = "https://fm.missevan.com/api/user/info"
 	var rst []string
-	resp, _ := http.Get(url)
+	resp, _ := http.Get(userInfoUrl)
 	ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	strs := resp.Header.Values("Set-Cookie")
