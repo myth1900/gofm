@@ -1,7 +1,6 @@
 package gofm
 
 import (
-	"github.com/gorilla/websocket"
 	"time"
 )
 
@@ -17,9 +16,14 @@ type room struct {
 }
 
 func NewLiveRoom(roomID int) Room {
-	return &room{
-		roomID: roomID,
+	r := &room{
+		roomID:          roomID,
+		connectAdcs:     make(chan *audience, 100),
+		waitConnectAdcs: make(chan *audience, 100),
+		waitClosedAdcs:  make(chan *audience, 100),
 	}
+	r.backGround()
+	return r
 }
 
 // IncAdcs 增加听众，返回增加后的人数
@@ -68,7 +72,7 @@ func (r *room) backGround() {
 		for {
 			<-ticker.C
 			select {
-			case e := <-r.connectAdcs:
+			case e := <-r.waitConnectAdcs:
 				e.Connect()
 				r.connectAdcs <- e
 			default:
@@ -79,7 +83,7 @@ func (r *room) backGround() {
 
 	// 每隔一段时间，从等待关闭的队列中拉取一个人进行关闭
 	go func() {
-		ticker := time.NewTimer(duration)
+		ticker := time.NewTicker(duration)
 		defer ticker.Stop()
 		for {
 			<-ticker.C
