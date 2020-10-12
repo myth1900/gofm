@@ -1,6 +1,7 @@
 package gofm
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -97,4 +98,20 @@ func (r *room) backGround() {
 			}
 		}
 	}()
+
+	// 房间信息
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+		for {
+			<-ticker.C
+			r.log()
+		}
+	}()
+}
+
+func (r *room) log() {
+	fmt.Printf("connected:\t%d\n", len(r.connectAdcs))
+	fmt.Printf("waitConnected:\t%d\n", len(r.waitConnectAdcs))
+	fmt.Printf("waitClosed:\t%d\n\n", len(r.waitClosedAdcs))
 }

@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	gofm.NewServer().Run()
+	gofm.Run()
 }

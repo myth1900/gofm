@@ -1,6 +1,7 @@
 package gofm
 
 import (
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -17,6 +18,7 @@ func NewServer() *Server {
 }
 func (s *Server) Run() {
 	e := gin.Default()
+	pprof.Register(e, "/debug/pprof")
 	liveRoomGroup := e.Group("/api")
 	{
 		liveRoomGroup.PUT("/incadcs", s.handleIncAdcs)

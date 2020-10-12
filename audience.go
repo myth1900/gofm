@@ -51,10 +51,7 @@ func (a *audience) keepAlive() {
 	// 读消息
 	go func() {
 		for {
-			_, _, err := a.conn.ReadMessage()
-			if err != nil {
-				panic(err)
-			}
+			_, _, _ = a.conn.ReadMessage()
 			//fmt.Println(string(bts))
 		}
 	}()
@@ -90,6 +87,7 @@ func (a *audience) Connect() {
 	})
 	//
 	a.conn = conn
+	go a.keepAlive()
 
 }
 
