@@ -9,50 +9,60 @@ import (
 
 type Server struct {
 	Manager
+	e *gin.Engine
 }
 
 func NewServer() *Server {
-	return &Server{
-		Manager: NewManager(),
-	}
-}
-func (s *Server) Run() {
 	e := gin.Default()
 	pprof.Register(e, "/debug/pprof")
-	liveRoomGroup := e.Group("/api")
-	{
-		liveRoomGroup.PUT("/incadcs", s.handleIncAdcs)
-		liveRoomGroup.PUT("/decadcs", s.handleDecAdcs)
-	}
 
-	e.Run(":3016")
+	s := &Server{
+		Manager: NewManager(),
+		e:       e,
+	}
+	s.handleRoutes()
+	return s
 }
 
-// handleIncAdcs increase audiences 增加在线人数
-func (s *Server) handleIncAdcs(ctx *gin.Context) {
-	roomID, _ := strconv.Atoi(ctx.Query("room_id"))
+func (s *Server) Run() {
+	s.e.Run(":3016")
+}
+
+type Route struct {
+	Method string
+	Path   string
+	Handle func(ctx *gin.Context)
+}
+
+func (s *Server) handleRoutes() {
+	routes := []Route{
+		{
+			http.MethodPut, "/api/:room_id/audience", s.handleAudience,
+		},
+		{
+			http.MethodGet, "/debug/status", s.handleStatus,
+		},
+	}
+
+	for _, r := range routes {
+		s.e.Handle(r.Method, r.Path, r.Handle)
+	}
+}
+
+func (s *Server) handleAudience(ctx *gin.Context) {
+	roomID, _ := strconv.Atoi(ctx.Param("room_id"))
 	nums, _ := strconv.Atoi(ctx.Query("nums"))
-	adcs, err := s.Manager.IncreaseAudience(roomID, nums)
+	err := s.UpdateAudienceWithRoomID(roomID, nums)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, &LRAdcsResponse{CurAdcs: adcs, Message: err.Error()})
+		ctx.JSON(http.StatusInternalServerError, &Response{Message: err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, &LRAdcsResponse{CurAdcs: adcs, Message: ""})
+	ctx.JSON(http.StatusOK, &Response{Message: ""})
+}
+func (s *Server) handleStatus(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, s.Status())
 }
 
-// handleDecAdcs decrease audiences 减少在线人数
-func (s *Server) handleDecAdcs(ctx *gin.Context) {
-	roomID, _ := strconv.Atoi(ctx.Query("room_id"))
-	nums, _ := strconv.Atoi(ctx.Query("nums"))
-	adcs, err := s.Manager.DecreaseAudience(roomID, nums)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, &LRAdcsResponse{CurAdcs: adcs, Message: err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, &LRAdcsResponse{CurAdcs: adcs, Message: ""})
-}
-
-type LRAdcsResponse struct {
+type Response struct {
 	Message string `json:"message"`
-	CurAdcs int    `json:"cur_adcs"`
 }

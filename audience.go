@@ -48,17 +48,27 @@ type joinAction struct {
 }
 
 func (a *audience) keepAlive() {
-	// 读消息
+	// 取消息
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				//fmt.Println(err)
+			}
+		}()
 		for {
 			_, _, _ = a.conn.ReadMessage()
-			//fmt.Println(string(bts))
 		}
 	}()
 
 	// 维持心跳
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				//fmt.Println(err)
+			}
+		}()
 		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
 		for {
 			<-ticker.C
 			if err := a.conn.WriteMessage(1, []byte(heartBeatMsg)); err != nil {
@@ -69,6 +79,16 @@ func (a *audience) keepAlive() {
 }
 
 func (a *audience) Connect() {
+
+	a.initConn()
+	// join room
+	a.joinRoom()
+
+	go a.keepAlive()
+
+}
+
+func (a *audience) initConn() {
 	ws := &websocket.Dialer{}
 	header := make(map[string][]string)
 	header["Cookie"] = a.getCookie()
@@ -78,17 +98,15 @@ func (a *audience) Connect() {
 	}
 	ioutil.ReadAll(resp.Body)
 
-	// join room
-	conn.WriteJSON(&joinAction{
+	a.conn = conn
+}
+func (a *audience) joinRoom() {
+	a.conn.WriteJSON(&joinAction{
 		Action: "join",
 		Uuid:   uuid.NewV1().String(),
 		Type:   "room",
 		RoomID: a.roomID,
 	})
-	//
-	a.conn = conn
-	go a.keepAlive()
-
 }
 
 // FM_SESS=20201009|2e30kyum2jik391yvwz42rz79; path=/; expires=Mon, 12 Oct 2020 11:06:56 GMT; secure; httponly

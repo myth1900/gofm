@@ -3,8 +3,8 @@ package gofm
 import "sync"
 
 type Manager interface {
-	IncreaseAudience(roomID, nums int) (int, error)
-	DecreaseAudience(roomID, nums int) (int, error)
+	UpdateAudienceWithRoomID(roomID, nums int) error
+	Status() []RoomStatus
 }
 
 func NewManager() Manager {
@@ -19,14 +19,19 @@ type manager struct {
 	rooms map[int]Room
 }
 
-func (m *manager) IncreaseAudience(roomID, nums int) (int, error) {
-	room := m.getRoom(roomID)
-	return room.IncAdcs(nums)
+func (m *manager) Status() []RoomStatus {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	rss := make([]RoomStatus, 0)
+	for _, room := range m.rooms {
+		rss = append(rss, room.Status())
+	}
+	return rss
 }
 
-func (m manager) DecreaseAudience(roomID, nums int) (int, error) {
+func (m *manager) UpdateAudienceWithRoomID(roomID, nums int) error {
 	room := m.getRoom(roomID)
-	return room.DecAdcs(nums)
+	return room.UpdateAudience(nums)
 }
 
 func (m *manager) getRoom(roomID int) Room {
@@ -36,7 +41,7 @@ func (m *manager) getRoom(roomID int) Room {
 	if !ok {
 		m.mu.RUnlock()
 		m.mu.Lock()
-		room = NewLiveRoom(roomID)
+		room = NewRoom(roomID)
 		m.rooms[roomID] = room
 		m.mu.Unlock()
 		m.mu.RLock()
