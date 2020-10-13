@@ -8,7 +8,7 @@
         >
           <v-text-field
               v-model="room_id"
-              label="房间ID"
+              label="房间ID （在浏览器打开直播间地址栏后的那串数字）"
               required
           >
           </v-text-field>
@@ -20,7 +20,7 @@
         >
           <v-text-field
               v-model="nums"
-              label="人数"
+              label="人数（0-100，其余无效）"
               required
           >
           </v-text-field>
@@ -47,19 +47,23 @@
             cols="12"
             md="3"
         >
-          <v-card>
-            <v-card-title>
-              {{room.creator}}
-            </v-card-title>
-            <v-card-subtitle>
-              {{ room.room_id}}
-            </v-card-subtitle>
+          <a :href="'https://fm.missevan.com/live/' + room.room_id"
+          target="_blank">
+            <v-card>
+              <v-card-title>
+                {{room.creator}}
+              </v-card-title>
+              <v-card-subtitle>
+                {{ room.room_id}}
+              </v-card-subtitle>
 
-            <v-card-text>
-              虚拟人数
-              {{ room.connected + room.wait_connect}}
-            </v-card-text>
-          </v-card>
+              <v-card-text>
+                虚拟人数
+                {{ room.connected + room.wait_connect}}
+              </v-card-text>
+            </v-card>
+          </a>
+
 
         </v-col>
       </v-row>
@@ -105,10 +109,16 @@ export default {
         console.log(res)
       })
     },
+  },
+  mounted() {
+    this.refreshRooms()
   }
 }
 </script>
 
 <style scoped>
+a {
+  text-decoration: none;
+}
 
 </style>

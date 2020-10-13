@@ -14,3 +14,4 @@
 # Dependency directories (remove the comment below to include it)
 /web/node_modules/
 /bindata.go
+/cmd/gofm/gofm
