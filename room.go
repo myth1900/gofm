@@ -31,9 +31,11 @@ func NewRoom(roomID int) Room {
 }
 
 type RoomStatus struct {
-	Connected   int `json:"connected"`
-	WaitConnect int `json:"wait_connected"`
-	WaitClosed  int `json:"wait_closed"`
+	RoomID      int    `json:"room_id"`
+	Creator     string `json:"creator"`
+	Connected   int    `json:"connected"`
+	WaitConnect int    `json:"wait_connect"`
+	WaitClosed  int    `json:"wait_closed"`
 }
 
 type room struct {
@@ -47,6 +49,8 @@ type room struct {
 
 func (r *room) Status() RoomStatus {
 	return RoomStatus{
+		RoomID:      r.roomID,
+		Creator:     "kaka",
 		Connected:   len(r.connectedAdcs),
 		WaitConnect: len(r.waitConnectAdcs),
 		WaitClosed:  len(r.waitClosedAdcs),
