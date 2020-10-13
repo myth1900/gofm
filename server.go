@@ -91,10 +91,20 @@ func (s *Server) handleStaticFiles() {
 }
 
 func (s *Server) handleAudience(ctx *gin.Context) {
-	roomID, _ := strconv.Atoi(ctx.Param("room_id"))
-	nums, _ := strconv.Atoi(ctx.Query("nums"))
-	err := s.UpdateAudienceWithRoomID(roomID, nums)
-	if err != nil {
+	if err := func() error {
+		roomID, err := strconv.Atoi(ctx.Param("room_id"))
+		if err != nil {
+			return err
+		}
+		nums, err := strconv.Atoi(ctx.Query("nums"))
+		if err != nil {
+			return err
+		}
+		if err := s.UpdateAudienceWithRoomID(roomID, nums); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
 		ctx.JSON(http.StatusInternalServerError, &Response{Message: err.Error()})
 		return
 	}

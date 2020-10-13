@@ -30,21 +30,28 @@ func (m *manager) Status() []RoomStatus {
 }
 
 func (m *manager) UpdateAudienceWithRoomID(roomID, nums int) error {
-	room := m.getRoom(roomID)
+	room, err := m.getRoom(roomID)
+	if err != nil {
+		return err
+	}
 	return room.UpdateAudience(nums)
 }
 
-func (m *manager) getRoom(roomID int) Room {
+func (m *manager) getRoom(roomID int) (Room, error) {
+	var err error
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	room, ok := m.rooms[roomID]
 	if !ok {
 		m.mu.RUnlock()
+		defer m.mu.RLock()
 		m.mu.Lock()
-		room = NewRoom(roomID)
+		defer m.mu.Unlock()
+		room, err = NewRoom(roomID)
+		if err != nil {
+			return nil, err
+		}
 		m.rooms[roomID] = room
-		m.mu.Unlock()
-		m.mu.RLock()
 	}
-	return room
+	return room, nil
 }

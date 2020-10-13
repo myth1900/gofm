@@ -1,8 +1,12 @@
 package gofm
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -18,16 +22,21 @@ type Room interface {
 	Status() RoomStatus
 }
 
-func NewRoom(roomID int) Room {
+func NewRoom(roomID int) (Room, error) {
+	info, err := getRoomInfo(roomID)
+	if err != nil {
+		return nil, err
+	}
 	r := &room{
 		roomID:          roomID,
+		username:        info.Info.Creator.Username,
 		mu:              &sync.Mutex{},
 		connectedAdcs:   make(chan Audience, MaxAudiences),
 		waitConnectAdcs: make(chan Audience, MaxAudiences),
 		waitClosedAdcs:  make(chan Audience, MaxAudiences),
 	}
 	r.init()
-	return r
+	return r, nil
 }
 
 type RoomStatus struct {
@@ -42,6 +51,7 @@ type room struct {
 	roomID          int
 	mu              *sync.Mutex
 	adcNums         int
+	username        string
 	connectedAdcs   chan Audience
 	waitConnectAdcs chan Audience
 	waitClosedAdcs  chan Audience
@@ -50,7 +60,7 @@ type room struct {
 func (r *room) Status() RoomStatus {
 	return RoomStatus{
 		RoomID:      r.roomID,
-		Creator:     "kaka",
+		Creator:     r.username,
 		Connected:   len(r.connectedAdcs),
 		WaitConnect: len(r.waitConnectAdcs),
 		WaitClosed:  len(r.waitClosedAdcs),
@@ -142,4 +152,32 @@ func (r *room) init() {
 			}
 		}
 	}()
+}
+
+// OfficialRoomInfo
+type OfcRoomInfo struct {
+	Code int `json:"code"`
+	Info struct {
+		Creator struct {
+			Username string `json:"username"`
+		} `json:"creator"`
+	} `json:"info"`
+}
+
+// 获取房间信息
+func getRoomInfo(roomID int) (*OfcRoomInfo, error) {
+	url := "https://fm.missevan.com/api/v2/live/" + strconv.FormatInt(int64(roomID), 10)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil && resp.Body == nil && resp.StatusCode != http.StatusOK {
+		return nil, errors.New("错误的直播间")
+	}
+	bts, _ := ioutil.ReadAll(resp.Body)
+	ori := &OfcRoomInfo{}
+	if err := json.Unmarshal(bts, &ori); err != nil {
+		return nil, err
+	}
+	return ori, nil
 }

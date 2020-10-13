@@ -29,22 +29,18 @@
     </v-app-bar>
 
     <v-main>
-      <UpdateForm></UpdateForm>
-      <RoomList></RoomList>
+      <Rooms></Rooms>
     </v-main>
   </v-app>
 </template>
 
 <script>
-
-import UpdateForm from "@/components/UpdateForm";
-import RoomList from "@/components/RoomList";
+import Rooms from "@/components/Rooms";
 export default {
   name: 'App',
 
   components: {
-    UpdateForm,
-    RoomList
+    Rooms
   },
 
   data: () => ({
