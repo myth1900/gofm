@@ -15,3 +15,4 @@
 /web/node_modules/
 /bindata.go
 /cmd/gofm/gofm
+/web/dist/

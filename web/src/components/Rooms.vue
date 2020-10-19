@@ -72,8 +72,12 @@
 </template>
 
 <script>
+
+import {UpdateRoomAudiences} from "@/store/ajax";
+import {REFRESH_ROOMS_STATUS} from "@/store/mutation-types";
+
 export default {
-  name: "UpdateForm",
+  name: "Rooms",
   data: function () {
     return {
       rooms: [],
@@ -83,35 +87,15 @@ export default {
   },
   methods: {
     submitUpdate() {
-      let url = "/api" + "/room/" + this.room_id + "/audience"
-      this.$axios({
-        url: url,
-        method: "put",
-        params: {
-          nums: this.nums,
-        }
-      }).then(res => {
-        console.log(res.data)
-      }).catch(res => {
-        console.log(res.data)
-      }).finally(
-          this.refreshRooms
-      )
+      UpdateRoomAudiences(this.room_id,this.nums)
+      this.$store.commit(REFRESH_ROOMS_STATUS)
     },
-    refreshRooms: function () {
-      this.$axios({
-        url: "/api/room/status",
-        method: "get",
-      }).then(res => {
-        console.log(res)
-        this.rooms = res.data
-      }).catch(res => {
-        console.log(res)
-      })
+    refreshRooms: function (){
+      this.$store.commit("refreshRooms")
     },
   },
   mounted() {
-    this.refreshRooms()
+    this.rooms = this.$store.getters.getRooms
   }
 }
 </script>

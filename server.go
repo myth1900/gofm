@@ -14,8 +14,22 @@ type Server struct {
 	e *gin.Engine
 }
 
+func Cors() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		ctx.Header("Access-Control-Allow-Origin", "*") // 可将将 * 替换为指定的域名
+		ctx.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+		ctx.Header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
+		ctx.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Cache-Control, Content-Language, Content-Type")
+		ctx.Header("Access-Control-Allow-Credentials", "true")
+		ctx.Next()
+		if ctx.Request.Method == http.MethodOptions {
+			ctx.AbortWithStatus(http.StatusNoContent)
+		}
+	}
+}
 func NewServer() *Server {
 	e := gin.Default()
+	e.Use(Cors())
 	pprof.Register(e, "/debug/pprof")
 
 	s := &Server{
@@ -43,7 +57,7 @@ func (s *Server) handleRoutes() {
 			http.MethodPut, "/api/room/:room_id/audience", s.handleAudience,
 		},
 		{
-			http.MethodGet, "/api/room/status", s.handleStatus,
+			http.MethodGet, "/api/rooms/status", s.handleStatus,
 		},
 	}
 
@@ -70,16 +84,16 @@ func (s *Server) handleStaticFiles() {
 		Prefix:    "web/dist/js",
 		Fallback:  "index.html",
 	}
-	fs := &assetfs.AssetFS{
-		Asset:     Asset,
-		AssetDir:  AssetDir,
-		AssetInfo: infoFunc,
-		Prefix:    "web/dist",
-		Fallback:  "index.html",
-	}
+	//fs := &assetfs.AssetFS{
+	//	Asset:     Asset,
+	//	AssetDir:  AssetDir,
+	//	AssetInfo: infoFunc,
+	//	Prefix:    "web/dist/",
+	//	Fallback:  "index.html",
+	//}
 	s.e.StaticFS("/css", fsCss)
 	s.e.StaticFS("/js", fsJS)
-	s.e.StaticFS("/favicon.ico", fs)
+	//s.e.StaticFS("/", fs)
 
 	s.e.GET("/", func(ctx *gin.Context) {
 		ctx.Writer.WriteHeader(http.StatusOK)
@@ -87,6 +101,13 @@ func (s *Server) handleStaticFiles() {
 		ctx.Writer.Write(idxHtml)
 		ctx.Writer.Header().Add("Accept", "text/html")
 		ctx.Writer.Flush()
+	})
+	s.e.GET("/favicon.ico", func(ctx *gin.Context) {
+		ctx.Writer.WriteHeader(http.StatusOK)
+		fav, _ := Asset("web/dist/favicon.ico")
+		ctx.Writer.Write(fav)
+		ctx.Writer.Flush()
+
 	})
 }
 
